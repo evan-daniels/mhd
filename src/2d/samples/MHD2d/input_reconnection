@@ -1,0 +1,34 @@
+x_left
+-9.8
+x_right
+9.8
+y_bottom
+-9.8
+y_top
+9.8
+J - number of cell in x-direction (per processor)
+80
+K - number of cells in y-direction (total)
+639
+L - components in system
+8
+t_final - simulation time
+25
+dt_out - output interval
+0.5
+cfl - cfl condition scale
+.75
+alpha - minmod3 reconstruction parameter
+1.3
+par_count - number of parameters in parameters array
+5
+gamma - ratio of specific heats passed as a parameter in parameters array
+1.666666667
+problem - 0-> OT, 1->Reconnection
+1
+eta
+0.009
+di
+.2
+eta_j
+0.00014
