@@ -60,4 +60,9 @@ void CENTPACK::spectral_radii(const doublearray1d& u, const doublearray1d& param
 	cfy = sqrt(0.5*(A + B + sqrt(pow(A+B,2.0) - 4.0*A*pow(u(6),2.0)/rho)));
 	rx = fabs(vx) + cfx;
 	ry = fabs(vy) + cfy;
+
+	p = std::max(p, 1e-10);
+	if (p < 1e-8 || rho < 0.01)
+		printf("WARNING: rho=%.3e p=%.3e\n", rho, p);
+
 }

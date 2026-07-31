@@ -107,8 +107,6 @@ else if (problem == 1)
     double Lx     = 19.6;
     double Ly     = 19.6;
 
-    double Bz = 1e-4 * cos(2.0*M_PI*xc/Lx) * sin(M_PI*yc/Ly);  // small seed
-
     for (k = 0; k < K+4; k++)
     {
       for (j = 0; j < J+4; j++)
@@ -123,7 +121,7 @@ else if (problem == 1)
         double Bx = B0 * tanh(yc / lambda)
                     - psi0 * (M_PI / Ly) * cos(2.0*M_PI*xc / Lx) * sin(M_PI*yc / Ly);
         double By = psi0 * (2.0*M_PI / Lx) * sin(2.0*M_PI*xc / Lx) * cos(M_PI*yc / Ly);
-        double Bz = 0.0;
+        double Bz = 1e-4 * cos(2.0*M_PI*xc/Lx) * sin(M_PI*yc/Ly);
 
         double U = p / (gamma - 1.0)
                  + 0.5 * rho * (vx*vx + vy*vy + vz*vz)

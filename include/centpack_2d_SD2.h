@@ -82,8 +82,8 @@ namespace CENTPACK
                       const doublearray1d& parameters);
 
 	void hall_step(doublearray3d& un, const doublearray1d& dx_cell,
-               const doublearray1d& dy_cell, double dt,
-               const doublearray1d& parameters);
+							const doublearray1d& dy_cell, double dt,
+							const doublearray1d& parameters);
 
 	void electric_field(const doublearray3d& un,
                     const doublearray1d& dx_cell,
