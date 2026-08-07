@@ -105,7 +105,6 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 	t_init = 0.0;
 	
 	doublearray3d un(J+4,K+4,L);
-	doublearray3d Efield(J+4, K+4, 3);
 	
 	mesh(x_left, x_right, y_bottom, y_top, x, x_cell, dx_cell, dx_interface, y, y_cell, dy_cell, dy_interface, id, p);
 	
@@ -117,6 +116,7 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 
 	t_out = 0.0;
 	n++;
+
 
 	do
 	{
@@ -140,24 +140,13 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 
 		t += dt;
 		t_out += dt;
-	
-		electric_field(un, dx_cell, dy_cell, parameters, Efield);
-		if (id == 0) {
-			long k_sample = K/4 + 2;  // y ≈ 4.9, away from current sheet
-			double Bx_c  = un(J/2+2, k_sample, 4);
-			double jz_c  = (un(J/2+3,k_sample,5) - un(J/2+1,k_sample,5))/(2.0*dx_cell(J/2+2))
-						- (un(J/2+2,k_sample+1,4) - un(J/2+2,k_sample-1,4))/(2.0*dy_cell(k_sample));
-			printf("Bx=%.4e jz=%.4e e2=%.4e\n", Bx_c, jz_c, Efield(J/2+2,k_sample,1));
-		}
-		evolution_2d_SD2(un, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, Efield, id, p);
-		if (id == 0) printf("t=%.4f Bx_sample=%.6e By_sample=%.6e Bz_sample=%.6e\n", 
-			t, un(J/2+2,K/4+2,4), un(J/2+2,K/4+2,5), un(J/2+2,K/4+2,6));
-
-		// resistivity_step(un, dx_cell, dy_cell, dt, parameters);
+		
+		evolution_2d_SD2(un, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
+		resistivity_step(un, dx_cell, dy_cell, dt, parameters);
 		// hall_step(un, dx_cell, dy_cell, dt, parameters);
-		// int nsub = 50;
-		// for (int isub = 0; isub < nsub; isub++)
-			//hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
+		int nsub = 50;
+		for (int isub = 0; isub < nsub; isub++)
+			hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
 		
 		dt_cpu = (clock() - t_start)/CLOCKS_PER_SEC;
 		sum_t = sum_t + dt_cpu;

@@ -1,0 +1,4 @@
+simulation_MHD2d_reconnection_SD2/
+simulation_MHD2d_SD2/
+*.dSYM/
+lib/*.a

@@ -101,13 +101,12 @@ else if (problem == 1)
 {
     double B0     = 1.0;
     double n0     = 1.0;
-    double nb = 0.5; // was .2
+    // double nb     = 0.2; original
+    double nb = 0.5;
     double lambda = 0.5;
     double psi0   = 0.1;
     double Lx     = 19.6;
     double Ly     = 19.6;
-
-    double Bz = 1e-4 * cos(2.0*M_PI*xc/Lx) * sin(M_PI*yc/Ly);  // small seed
 
     for (k = 0; k < K+4; k++)
     {

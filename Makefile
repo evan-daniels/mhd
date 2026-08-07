@@ -63,7 +63,7 @@ libcp_2d_FD2:
 	mv libcp_2d_FD2.a lib/
 
 libcp_2d_SD2:
-	mpicxx -c -fPIC src/common/disclaimer.cc src/common/minmod3.cc src/2d/common/*.cc src/2d/SD2/*.cc -Ilib/ -Iinclude/
+	mpicxx -c -fPIC -std=c++11 src/common/disclaimer.cc src/common/minmod3.cc src/2d/common/*.cc src/2d/SD2/*.cc -Ilib/ -Iinclude/
 	ar cr libcp_2d_SD2.a *.o
 	rm *.o
 	mv libcp_2d_SD2.a lib/

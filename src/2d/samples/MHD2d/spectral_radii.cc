@@ -45,19 +45,31 @@ using namespace std;
 
 void CENTPACK::spectral_radii(const doublearray1d& u, const doublearray1d& parameters, double& rx, double& ry)
 {
-	double rho, vx, vy, vz, p, A, B, cfx, cfy;
-	double gamma = parameters(0);
-	
-	rho = u(0);
-	vx = u(1)/rho;
-	vy = u(2)/rho;
-	vz = u(3)/rho;
-	p = (gamma - 1.0)*(u(7) - 0.5*rho*(pow(vx,2.0) + pow(vy,2.0) + pow(vz,2.0))  - 0.5*(pow(u(4),2.0) + pow(u(5),2.0) + pow(u(6),2.0)));
-	p = std::max(p, 1e-10);
-	A = gamma*p/rho;
-	B = (pow(u(4),2.0) + pow(u(5),2.0) + pow(u(6),2.0))/rho;
-	cfx = sqrt(0.5*(A + B + sqrt(pow(A+B,2.0) - 4.0*A*pow(u(4),2.0)/rho)));
-	cfy = sqrt(0.5*(A + B + sqrt(pow(A+B,2.0) - 4.0*A*pow(u(6),2.0)/rho)));
-	rx = fabs(vx) + cfx;
-	ry = fabs(vy) + cfy;
+    double rho, vx, vy, vz, p, A, B, cfx, cfy;
+    double gamma  = parameters(0);
+    int    problem = (int) parameters(1);
+    double di     = (problem == 1 && parameters.getIndex1Size() > 3) ? parameters(3) : 0.0;
+
+    rho = u(0);
+    vx  = u(1)/rho;
+    vy  = u(2)/rho;
+    vz  = u(3)/rho;
+
+    p = (gamma-1.0)*(u(7) - 0.5*rho*(vx*vx + vy*vy + vz*vz)
+      - 0.5*(u(4)*u(4) + u(5)*u(5) + u(6)*u(6)));
+    p = std::max(p, 1e-10);
+
+    A = gamma*p/rho;
+    B = (u(4)*u(4) + u(5)*u(5) + u(6)*u(6))/rho;
+
+    cfx = sqrt(0.5*(A + B + sqrt((A+B)*(A+B) - 4.0*A*u(4)*u(4)/rho)));
+    cfy = sqrt(0.5*(A + B + sqrt((A+B)*(A+B) - 4.0*A*u(6)*u(6)/rho)));
+
+    // Hall whistler wave speed
+    double Bmag    = sqrt(u(4)*u(4) + u(5)*u(5) + u(6)*u(6));
+	double rho_eff = std::max(rho, 0.1);
+	double v_hall  = di * Bmag / rho_eff;
+
+    rx = fabs(vx) + cfx + v_hall;
+    ry = fabs(vy) + cfy + v_hall;
 }

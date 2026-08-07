@@ -31,11 +31,11 @@ namespace CENTPACK
 	// EVOLUTION
 	////////////////////////////////////////////////////////////////////////////
 
-	void evolution_2d_SD2(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const doublearray3d& Efield, const int& id, const int& p);
+	void evolution_2d_SD2(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const int& id, const int& p);
 	
 	void reconstruction_2d_SD2(doublearray3d& un, doublearray3d& u_N, doublearray3d& u_S, doublearray3d& u_E, doublearray3d& u_W, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface,const double& alpha);
 	
-	// LIMITERS	-- minmod functions
+	// LIMITERS -- minmod functions
 	
 	double sign(const double& x);
 
@@ -45,11 +45,11 @@ namespace CENTPACK
 	
 	double minmod3(const double& x, const double& y, const double& z);
 
-	void C_flux_2d_SD2(const doublearray3d& u_N, const doublearray3d& u_S, const doublearray3d& u_E, const doublearray3d& u_W, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& parameters, const doublearray3d& Efield, doublearray3d& C);
-
-	void Hx_flux_2d_SD2(const doublearray1d& u_w, const doublearray1d& u_e, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& Hx);
-
-	void Hy_flux_2d_SD2(const doublearray1d& u_s, const doublearray1d& u_n, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& Hy);
+	void C_flux_2d_SD2(const doublearray3d& u_N, const doublearray3d& u_S, const doublearray3d& u_E, const doublearray3d& u_W, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& parameters, const doublearray3d& jcurl, doublearray3d& C);
+	
+	void Hx_flux_2d_SD2(const doublearray1d& u_w, const doublearray1d& u_e, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& Hx);
+	
+	void Hy_flux_2d_SD2(const doublearray1d& u_s, const doublearray1d& u_n, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& Hy);
 	
 	//end of evolution routines
 	
@@ -63,9 +63,9 @@ namespace CENTPACK
 
 	void boundary_conditions(doublearray3d& u, const doublearray1d& parameters, const int& id, const int& p);
 
-	void flux_x(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& f);
+	void flux_x(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& f);
 
-	void flux_y(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& g);
+	void flux_y(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& g);
 	
 	void mesh(const double& x_init, const double& x_final, const double& y_init, const double& y_final, doublearray1d& x, doublearray1d& x_cell, doublearray1d& dx_cell, doublearray1d& dx_interface, doublearray1d& y, doublearray1d& y_cell, doublearray1d& dy_cell, doublearray1d& dy_interface, const int& id, const int& p);
 	
@@ -84,12 +84,6 @@ namespace CENTPACK
 	void hall_step(doublearray3d& un, const doublearray1d& dx_cell,
                const doublearray1d& dy_cell, double dt,
                const doublearray1d& parameters);
-
-	void electric_field(const doublearray3d& un,
-                    const doublearray1d& dx_cell,
-                    const doublearray1d& dy_cell,
-                    const doublearray1d& parameters,
-                    doublearray3d& E);
 }
 
 #endif
