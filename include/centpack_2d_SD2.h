@@ -27,13 +27,19 @@ namespace CENTPACK
 	
 	void time_step_2d(const doublearray3d& un, const doublearray1d& dx, const doublearray1d& dy, const double& cfl, double& dt, double& t, double& t_out, double& dt_out, doublearray1d& lambda, doublearray1d& mu, const doublearray1d& parameters);
 	
+	void time_step_em(const doublearray3d& un, const doublearray1d& dx, const doublearray1d& dy, const double& cfl, double& dtau, double& dt, double& t, double& t_out, double& dt_out, doublearray1d& lambda, doublearray1d& mu, const doublearray1d& parameters);
+	
 	////////////////////////////////////////////////////////////////////////////
 	// EVOLUTION
 	////////////////////////////////////////////////////////////////////////////
 
 	void evolution_2d_SD2(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const doublearray3d& Efield, const int& id, const int& p);
-	
+
+	void evolution_em(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const doublearray3d& Efield, const int& id, const int& p);
+
 	void reconstruction_2d_SD2(doublearray3d& un, doublearray3d& u_N, doublearray3d& u_S, doublearray3d& u_E, doublearray3d& u_W, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface,const double& alpha);
+
+	void reconstruction_em(doublearray3d& un, doublearray3d& u_N, doublearray3d& u_S, doublearray3d& u_E, doublearray3d& u_W, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface,const double& alpha);
 	
 	// LIMITERS	-- minmod functions
 	
@@ -55,6 +61,8 @@ namespace CENTPACK
 	
 	void end_of_step_2d_SD2(const doublearray3d& un, const double& dt, const double& t, double& dt_out, double& t_out, long& n, const double& sum_t, const double& dt_cpu, const doublearray1d& parameters, const int& id, const int& p);
 
+	void end_of_step_em(const doublearray3d& un, const double& dt, const double& t, double& dt_out, double& t_out, long& n, const double& sum_t, const double& dt_cpu, const doublearray1d& parameters, const int& id, const int& p);
+
 	void run_info_2d(double& dt, double& sum_t, long& J, long& K, double& cfl, const int& id, const int& p);
 	
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,7 +71,7 @@ namespace CENTPACK
 
 	void boundary_conditions(doublearray3d& u, const doublearray1d& parameters, const int& id, const int& p);
 
-	void flux_x(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& f);
+	void boundary_conditions_em(doublearray3d& u, const doublearray1d& parameters, const int& id, const int& p);
 
 	void flux_y(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& e_here, doublearray1d& g);
 	
@@ -82,8 +90,8 @@ namespace CENTPACK
                       const doublearray1d& parameters);
 
 	void hall_step(doublearray3d& un, const doublearray1d& dx_cell,
-							const doublearray1d& dy_cell, double dt,
-							const doublearray1d& parameters);
+               const doublearray1d& dy_cell, double dt,
+               const doublearray1d& parameters);
 
 	void electric_field(const doublearray3d& un,
                     const doublearray1d& dx_cell,

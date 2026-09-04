@@ -58,13 +58,17 @@
 
 using namespace std;
 
-void CENTPACK::time_step_2d(const doublearray3d& un, const doublearray1d& dx_cell, const doublearray1d& dy_cell, const double& cfl, double& dtp, double& t, double& t_out, double& dt_out, const doublearray1d& parameters)
+time_step_em(un, B, Jc, dx_cell, dy_cell, cfl_em, dtp_em, dt_fluid, parameters);
+
+void CENTPACK::time_step_em(const doublearray3d& un, const doublearray3d& B, const doublearray3d& Jc, const doublearray1d& dx_cell, const doublearray1d& dy_cell, const double& cfl, double& dtp, double& t, double& t_out, double& dt_out, const doublearray1d& parameters)
 {
-	long J = un.getIndex1Size() - 4;
-	long K = un.getIndex2Size() - 4;
-	long L = un.getIndex3Size();
+	long J = B.getIndex1Size() - 4;
+	long K = B.getIndex2Size() - 4;
+	//long L = un.getIndex3Size();
 	long j, k, l;
+
 	double rx, ry, r_maxx, r_maxy;
+	double dxj, dyk;
 	double dx_min = dx_cell(2);
 	double dy_min = dy_cell(2);
 	
@@ -81,12 +85,15 @@ void CENTPACK::time_step_2d(const doublearray3d& un, const doublearray1d& dx_cel
 	
 	for (j = 2; j < J + 2; j++)
 	{
+		dxj = dx_cell(j);
 		for (k = 2; k < K + 2; k++)
 		{
+			dyk = dy_cell(k);
+
 			for (l = 0; l < L; l++)
 				u_vector(l) = un(j,k,l);
 		
-			spectral_radii(u_vector, parameters, rx, ry);
+			spectral_radii_em(u_vector, dxj, dyk, parameters, rx, ry);
 		
 			if (rx > r_maxx)
 				r_maxx = rx;
@@ -95,5 +102,5 @@ void CENTPACK::time_step_2d(const doublearray3d& un, const doublearray1d& dx_cel
 		}
 	}
 	
-	dtp = cfl/sqrt((r_maxx/dx_min)*(r_maxx/dx_min) + (r_maxy/dy_min)*(r_maxy/dy_min));
+	dtp_em = cfl_em/sqrt((r_maxx/dx_min)*(r_maxx/dx_min) + (r_maxy/dy_min)*(r_maxy/dy_min));
 }

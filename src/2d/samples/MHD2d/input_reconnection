@@ -21,7 +21,7 @@ cfl - cfl condition scale
 alpha - minmod3 reconstruction parameter
 1.3
 par_count - number of parameters in parameters array
-4
+5
 gamma - ratio of specific heats passed as a parameter in parameters array
 1.666666667
 problem - 0-> OT, 1->Reconnection
@@ -29,4 +29,6 @@ problem - 0-> OT, 1->Reconnection
 eta
 0.009
 di
-0
+.2
+eta_j
+0.00014

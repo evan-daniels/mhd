@@ -75,7 +75,7 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 		disclaimer();
 	
 	int tag;		
-	MPI::Status status;
+	MPI_Status status;
 
 	double x_left, x_right, y_bottom, y_top, t, t_init, t_final, t_out;
 	double dx, dy, dtp, dt, cfl, dt_out, alpha;
@@ -98,37 +98,58 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 	doublearray1d dx_interface(J+3), dy_interface(K+3);
 	doublearray1d lambda(J+4), mu(K+4);
 	
-	
 	cout.setf(ios::scientific, ios::floatfield);
 	
 	t = 0.0;
 	t_init = 0.0;
 	
 	doublearray3d un(J+4,K+4,L);
-	doublearray3d Efield(J+4, K+4, 3);
+	
+	// all quantities in un are cell averages, the quantities are (L = 11):
+	//
+	// (0) density
+	// (1) x momentum
+	// (2) y momentum
+	// (3) z momentum
+	// (4) Energy (U)
+	// (5) Bx -- cell average, obtained from Bx CT x-interface averages
+	// (6) By -- cell average, obtained from By CT y-interface averages
+	// (7) Bz -- cell average, evolved with central-upwind scheme within 
+	// whistler solver
+	// (8) current (Jx)
+	// (9) current (Jy)
+	// (10) current (Jz)
+	
+	// doublearray2d Ex(J+5, K+5);
+	// doublearray2d Ey(J+5, K+5);
+	doublearray2d Ez(J+5, K+5);
+	doublearray2d Bx(J+5, K+4);
+	// These are the average Bx values over each x-interface
+	doublearray2d By(J+4, K+5);
+	// These are the average By values over each y-interface
+	// doublearray2d Bz(J+4, K+4);
+	// These are the cell averages of Bz at the cell centers
 	
 	mesh(x_left, x_right, y_bottom, y_top, x, x_cell, dx_cell, dx_interface, y, y_cell, dy_cell, dy_interface, id, p);
 	
 	write_mesh(x_cell, y_cell, id, p);
 	
-	initial_conditions(un, parameters, dx_cell, dy_cell, dx_interface, dy_interface, x_cell, y_cell, x, y);
+	initial_conditions(un, Bx, By, parameters, dx_cell, dy_cell, dx_interface, dy_interface, x_cell, y_cell, x, y);
 		
-	writeout(un, t, parameters, n, id, p);
+	writeout(un, Bx, By, Ez, t, parameters, n, id, p);
 
 	t_out = 0.0;
 	n++;
 
 	do
 	{
-		time_step_2d(un, dx_cell, dy_cell, cfl, dtp, t, t_out, dt_out, lambda, mu, parameters);
+		time_step_2d(un, dx_cell, dy_cell, cfl, dtp, t, t_out, dt_out, parameters);
 
-		if (std::isnan(dtp) || std::isinf(dtp)) {
+		if (std::isnan(dtp) || std::isinf(dtp)) 
 			MPI::COMM_WORLD.Abort(1);
-		}
 
-		MPI::COMM_WORLD.Barrier(); // COMMENT OR UNCOMMENT BASED ON WHAT DR BALBAS RECOMMENDS
-		MPI::COMM_WORLD.Reduce(&dtp, &dt, 1, MPI::DOUBLE, MPI::MIN, 0);
-		MPI::COMM_WORLD.Bcast(&dt, 1, MPI::DOUBLE, 0);
+		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Allreduce(&dtp, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 		
 		dt = min(dt, dt_out - t_out);
 		
@@ -140,20 +161,35 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 
 		t += dt;
 		t_out += dt;
+	
+		/*if (id == 0) {
+			long k_sample = K/4 + 2;  // y ≈ 4.9, away from current sheet
+			double Bx_c  = un(J/2+2, k_sample, 4);
+			double jz_c  = (un(J/2+3,k_sample,5) - un(J/2+1,k_sample,5))/(2.0*dx_cell(J/2+2))
+						- (un(J/2+2,k_sample+1,4) - un(J/2+2,k_sample-1,4))/(2.0*dy_cell(k_sample));
+			printf("Bx=%.4e jz=%.4e e2=%.4e\n", Bx_c, jz_c, Efield(J/2+2,k_sample,1));
+		}*/
+		evolution_2d_SD2(un, Bx, By, Ez, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
+		
+		/*if (id == 0) printf("t=%.4f Bx_sample=%.6e By_sample=%.6e Bz_sample=%.6e\n", 
+			t, un(J/2+2,K/4+2,4), un(J/2+2,K/4+2,5), un(J/2+2,K/4+2,6));*/
 
-		electric_field(un, dx_cell, dy_cell, parameters, Efield);
-		evolution_2d_SD2(un, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, Efield, id, p);
+		// resistivity_step(un, dx_cell, dy_cell, dt, parameters);
+		// hall_step(un, dx_cell, dy_cell, dt, parameters);
+		// int nsub = 50;
+		// for (int isub = 0; isub < nsub; isub++)
+			//hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
 		
 		dt_cpu = (clock() - t_start)/CLOCKS_PER_SEC;
-		sum_t = sum_t + dt_cpu;
+		sum_t += dt_cpu;
 		
-		end_of_step_2d_SD2(un, dt, t, dt_out, t_out, n, sum_t, dt_cpu, parameters, id, p);
+		end_of_step_2d_SD2(un, Bx, By, Ez, dt, t, dt_out, t_out, n, sum_t, dt_cpu, parameters, id, p);
 				
 		t_start = clock();
 		
 	}while(t < t_final);
 	
-	writeout(un, t, parameters, n, id, p);
+	writeout(un, Bx, By, Ez, t, parameters, n, id, p);
 	run_info_2d(dt, sum_t, J, K, cfl, id, p);
 	
 	return 0;

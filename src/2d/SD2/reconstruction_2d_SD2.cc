@@ -56,7 +56,8 @@ void CENTPACK::reconstruction_2d_SD2(doublearray3d& un, doublearray3d& u_N, doub
 
 	long J = un.getIndex1Size() - 4;
 	long K = un.getIndex2Size() - 4;
-	long L = un.getIndex3Size();
+	long L = 5;
+	// long L = un.getIndex3Size();
 	long j, k, l;
 	
 	double ux, uy;
