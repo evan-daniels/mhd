@@ -151,3 +151,52 @@ void CENTPACK::boundary_conditions(doublearray3d& u, const doublearray1d& parame
 		}
 	}
 }
+
+void CENTPACK::boundary_conditions_ct(doublearray3d& f, const int& id, const int& p)
+{
+	long J = f.getIndex1Size() - 4;
+	long K = f.getIndex2Size() - 4;
+	long L = f.getIndex3Size();   // = 1 for B1_xf / B2_yf
+	long j, l;
+
+	MPI::Status status;
+
+	// y-boundaries: no communication needed (same pattern as un)
+	for (l = 0; l < L; l++)
+	{
+		for (j = 2; j < J+2; j++)
+		{
+			f(j,0,l)   = f(j,K,l);
+			f(j,1,l)   = f(j,K+1,l);
+			f(j,K+2,l) = f(j,2,l);
+			f(j,K+3,l) = f(j,3,l);
+		}
+	}
+
+	// x-boundaries: same Sendrecv pattern as un, distinct tags (11-14) to avoid
+	// any collision with un's exchange (tags 1-4)
+	if (id < p-1) {
+		MPI::COMM_WORLD.Sendrecv(
+			&f(J,0,0),   2*L*(K+4), MPI::DOUBLE, id+1, 12,
+			&f(J+2,0,0), 2*L*(K+4), MPI::DOUBLE, id+1, 11,
+			status);
+	}
+	if (id > 0) {
+		MPI::COMM_WORLD.Sendrecv(
+			&f(2,0,0), 2*L*(K+4), MPI::DOUBLE, id-1, 11,
+			&f(0,0,0), 2*L*(K+4), MPI::DOUBLE, id-1, 12,
+			status);
+	}
+	if (id == 0) {
+		MPI::COMM_WORLD.Sendrecv(
+			&f(2,0,0), 2*L*(K+4), MPI::DOUBLE, p-1, 13,
+			&f(0,0,0), 2*L*(K+4), MPI::DOUBLE, p-1, 14,
+			status);
+	}
+	if (id == p-1) {
+		MPI::COMM_WORLD.Sendrecv(
+			&f(J,0,0),   2*L*(K+4), MPI::DOUBLE, 0, 14,
+			&f(J+2,0,0), 2*L*(K+4), MPI::DOUBLE, 0, 13,
+			status);
+	}
+}

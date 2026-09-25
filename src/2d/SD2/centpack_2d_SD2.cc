@@ -98,19 +98,29 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 	doublearray1d dx_interface(J+3), dy_interface(K+3);
 	doublearray1d lambda(J+4), mu(K+4);
 	
-	
 	cout.setf(ios::scientific, ios::floatfield);
 	
 	t = 0.0;
 	t_init = 0.0;
 	
 	doublearray3d un(J+4,K+4,L);
+	doublearray3d B1_xf(J+4,K+4,1), B2_yf(J+4,K+4,1);
 	
 	mesh(x_left, x_right, y_bottom, y_top, x, x_cell, dx_cell, dx_interface, y, y_cell, dy_cell, dy_interface, id, p);
 	
 	write_mesh(x_cell, y_cell, id, p);
 	
 	initial_conditions(un, parameters, dx_cell, dy_cell, dx_interface, dy_interface, x_cell, y_cell, x, y);
+
+	for (k = 2; k < K+2; k++)
+		for (j = 2; j < J+2; j++)
+		{
+			B1_xf(j,k,0) = 0.5*(un(j,k,4) + un(j+1,k,4));
+			B2_yf(j,k,0) = 0.5*(un(j,k,5) + un(j,k+1,5));
+		}
+
+	boundary_conditions_ct(B1_xf, id, p);
+	boundary_conditions_ct(B2_yf, id, p);
 		
 	writeout(un, t, parameters, n, id, p);
 
@@ -141,12 +151,30 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 		t += dt;
 		t_out += dt;
 		
-		evolution_2d_SD2(un, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
-		resistivity_step(un, dx_cell, dy_cell, dt, parameters);
+		evolution_2d_SD2(un, B1_xf, B2_yf, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
+		
+		double max_divB = 0.0;
+		long max_j = -1, max_k = -1;
+		for (k = 2; k < K+2; k++)
+			for (j = 2; j < J+2; j++)
+			{
+				double divB = (B1_xf(j,k,0) - B1_xf(j-1,k,0)) / dx_cell(j)
+							+ (B2_yf(j,k,0) - B2_yf(j,k-1,0)) / dy_cell(k);
+				if (std::fabs(divB) > max_divB) { max_divB = std::fabs(divB); max_j = j; max_k = k; }
+			}
+		if (id == 0) printf("t=%.4f  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, max_divB, max_j, max_k);
+
+		if (max_j > 0 && max_k > 0)
+    	printf("  at max-divB cell: rho=%.3e  Bx_face=%.3e  By_face=%.3e\n",
+           un(max_j,max_k,0), B1_xf(max_j,max_k,0), B2_yf(max_j,max_k,0));
+		
+		if (id == 0) printf("t=%.4f  dt=%.3e  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, dt, max_divB, max_j, max_k);
+
+		// resistivity_step(un, dx_cell, dy_cell, dt, parameters);
 		// hall_step(un, dx_cell, dy_cell, dt, parameters);
-		int nsub = 50;
-		for (int isub = 0; isub < nsub; isub++)
-			hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
+		// int nsub = 50;
+		// for (int isub = 0; isub < nsub; isub++)
+		// 	hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
 		
 		dt_cpu = (clock() - t_start)/CLOCKS_PER_SEC;
 		sum_t = sum_t + dt_cpu;

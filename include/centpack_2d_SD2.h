@@ -31,8 +31,9 @@ namespace CENTPACK
 	// EVOLUTION
 	////////////////////////////////////////////////////////////////////////////
 
-	void evolution_2d_SD2(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const int& id, const int& p);
-	
+	// void evolution_2d_SD2(doublearray3d& un, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const int& id, const int& p);
+	void evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublearray3d& B2_yf, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha, const doublearray1d& parameters, const int& id, const int& p);
+
 	void reconstruction_2d_SD2(doublearray3d& un, doublearray3d& u_N, doublearray3d& u_S, doublearray3d& u_E, doublearray3d& u_W, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface,const double& alpha);
 	
 	// LIMITERS -- minmod functions
@@ -45,8 +46,9 @@ namespace CENTPACK
 	
 	double minmod3(const double& x, const double& y, const double& z);
 
-	void C_flux_2d_SD2(const doublearray3d& u_N, const doublearray3d& u_S, const doublearray3d& u_E, const doublearray3d& u_W, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& parameters, const doublearray3d& jcurl, doublearray3d& C);
-	
+	// void C_flux_2d_SD2(const doublearray3d& u_N, const doublearray3d& u_S, const doublearray3d& u_E, const doublearray3d& u_W, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& parameters, const doublearray3d& jcurl, doublearray3d& C);
+	void C_flux_2d_SD2(const doublearray3d& u_N, const doublearray3d& u_S, const doublearray3d& u_E, const doublearray3d& u_W, const doublearray1d& lambda, const doublearray1d& mu, const doublearray1d& parameters, const doublearray3d& jcurl, const doublearray3d& B1_xf, const doublearray3d& B2_yf, doublearray3d& C, doublearray3d& Ez_corner);
+
 	void Hx_flux_2d_SD2(const doublearray1d& u_w, const doublearray1d& u_e, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& Hx);
 	
 	void Hy_flux_2d_SD2(const doublearray1d& u_s, const doublearray1d& u_n, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& Hy);
@@ -62,6 +64,8 @@ namespace CENTPACK
 ////////////////////////////////////////////////////////////////////////////////
 
 	void boundary_conditions(doublearray3d& u, const doublearray1d& parameters, const int& id, const int& p);
+
+	void boundary_conditions_ct(doublearray3d& f, const int& id, const int& p);
 
 	void flux_x(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& f);
 

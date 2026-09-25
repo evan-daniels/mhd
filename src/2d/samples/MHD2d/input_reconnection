@@ -13,7 +13,7 @@ K - number of cells in y-direction (total)
 L - components in system
 8
 t_final - simulation time
-25
+5
 dt_out - output interval
 0.5
 cfl - cfl condition scale
