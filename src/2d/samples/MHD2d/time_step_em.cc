@@ -58,8 +58,6 @@
 
 using namespace std;
 
-time_step_em(un, B, Jc, dx_cell, dy_cell, cfl_em, dtp_em, dt_fluid, parameters);
-
 void CENTPACK::time_step_em(const doublearray3d& un, const doublearray3d& B, const doublearray3d& Jc, const doublearray1d& dx_cell, const doublearray1d& dy_cell, const double& cfl, double& dtp, double& t, double& t_out, double& dt_out, const doublearray1d& parameters)
 {
 	long J = B.getIndex1Size() - 4;

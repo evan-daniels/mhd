@@ -64,12 +64,11 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 	K = C.getIndex2Size() - 4;
 	//L = C.getIndex3Size();
 
-	double ax, axl, axr, ay, ayb, ayt;
-	double cxm, cxp, cym, cyp;
+	double ax, ax_e, ax_w, ay, ay_N, ay_S;
 
-	double rho_t, rho_b, rho_r, rho_l;
+	double rho_n, rho_s, rho_e, rho_w;
 
-	double Bt, Bb, Br, Bl;
+	double B_n, B_s, B_e, B_w;
 	
 	double Ey_ejm1;
 	double Ey_wj;
@@ -101,15 +100,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 	{
 		for (k = 1; k < K+2; k++)
 		{
-			Bl = sqrt(pow(B_E(j-1,k,0),2.0) + pow(B_E(j-1,k,1),2.0) + pow(B_E(j-1,k,2), 2.0));
-			Br = sqrt(pow(B_W(j,k,0),2.0) + pow(B_W(j,k,1),2.0) + pow(B_W(j,k,2), 2.0));
+			B_e = sqrt(pow(B_E(j-1,k,0),2.0) + pow(B_E(j-1,k,1),2.0) + pow(B_E(j-1,k,2), 2.0));
+			B_w = sqrt(pow(B_W(j,k,0),2.0) + pow(B_W(j,k,1),2.0) + pow(B_W(j,k,2), 2.0));
 
-			rho_l = rho_E(j-1,k);
-			rho_r = rho_W(j,k);
+			rho_e = rho_E(j-1,k);
+			rho_w = rho_W(j,k);
 
-			axl = di*Bl/(rho_l*dx_interface(j));
-			axr = di*Br/(rho_r*dx_interface(j));
-			ax = max(axl, axr);
+			ax_e = di*B_e/(rho_e*dx_interface(j));
+			ax_w = di*B_w/(rho_w*dx_interface(j));
+			ax = max(ax_e, ax_w);
 			Ez_edgex(j,k) = 0.5*(E_W(j,k,2) + E_E(j-1,k,2)) - 0.5*ax*(B_W(j,k,1) - B_E(j-1,k,1));
 		}
 	}
@@ -118,15 +117,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 	{
 		for (j = 2; j < J+2; j++)
 		{
-			Bb = sqrt(pow(B_N(j,k-1,0),2.0) + pow(B_N(j,k-1,1),2.0) + pow(B_N(j,k-1,2), 2.0));
-			Bt = sqrt(pow(B_S(j,k,0),2.0) + pow(B_S(j,k,1),2.0) + pow(B_S(j,k,2), 2.0));
+			B_n = sqrt(pow(B_N(j,k-1,0),2.0) + pow(B_N(j,k-1,1),2.0) + pow(B_N(j,k-1,2), 2.0));
+			B_s = sqrt(pow(B_S(j,k,0),2.0) + pow(B_S(j,k,1),2.0) + pow(B_S(j,k,2), 2.0));
 
-			rho_b = rho_N(j,k-1);
-			rho_t = rho_S(j,k);
+			rho_n = rho_N(j,k-1);
+			rho_s = rho_S(j,k);
 
-			ayb = di*Bb/(rho_b*dy_interface(k));
-			ayt = di*Bt/(rho_t*dy_interface(k));
-			ay = max(ayb, ayt);
+			ay_n = di*B_n/(rho_n*dy_interface(k));
+			ay_s = di*B_s/(rho_s*dy_interface(k));
+			ay = max(ay_n, ay_s);
 			Ez_edgey(j,k) = 0.5*(E_S(j,k,2) - E_N(j,k-1,2)) - 0.5*ay*(B_S(j,k,0) - B_N(j,k-1,0));
 		}
 	}
@@ -134,7 +133,7 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 	for (j = 2; j < J+3; j++)
 	{
 		for (k = 2; k < K+3; k++)
-			EX(j,k) = 0.5*(Ez_edgex(j,k-1) + Ez_edgex(j,k) + Ez_edgey(j-1,k) + Ez_edgey(j,k));
+			EX(j,k) = 0.25*(Ez_edgex(j,k-1) + Ez_edgex(j,k) + Ez_edgey(j-1,k) + Ez_edgey(j,k));
 	}
 
 	for (j = 2; j < J + 3; j++)
@@ -159,15 +158,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 			Bz_ejm1 = B_E(j-1,k,2);
 			Bz_wj = B_W(j,k,2);
 
-			Bl = sqrt(pow(B_E(j-1,k,0),2.0) + pow(B_E(j-1,k,1),2.0) + pow(B_E(j-1,k,2), 2.0));
-			Br = sqrt(pow(B_W(j,k,0),2.0) + pow(B_W(j,k,1),2.0) + pow(B_W(j,k,2), 2.0));
+			B_E = sqrt(pow(B_E(j-1,k,0),2.0) + pow(B_E(j-1,k,1),2.0) + pow(B_E(j-1,k,2), 2.0));
+			B_W = sqrt(pow(B_W(j,k,0),2.0) + pow(B_W(j,k,1),2.0) + pow(B_W(j,k,2), 2.0));
 
-			rho_l = rho_E(j-1,k);
-			rho_r = rho_W(j,k);
+			rho_E = rho_E(j-1,k);
+			rho_W = rho_W(j,k);
 
-			axl = di*Bl/(rho_l*dx_interface(j));
-			axr = di*Br/(rho_r*dx_interface(j));
-			ax = max(axl, axr);
+			ax_e = di*B_e/(rho_e*dx_interface(j));
+			axr_w = di*B_w/(rho_w*dx_interface(j));
+			ax = max(ax_e, ax_w);
 
 			Hx_halfm = 0.5*(Ey_wj + Ey_ejm1) - 0.5*ax*(Bz_wj - Bz_ejm1);
 			
@@ -177,15 +176,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 			Bz_ej = B_E(j,k,2);
 			Bz_wjp1 = B_W(j+1,k,2);
 
-			Bl = sqrt(pow(B_E(j,k,0),2.0) + pow(B_E(j,k,1),2.0) + pow(B_E(j,k,2), 2.0));
-			Br = sqrt(pow(B_W(j+1,k,0),2.0) + pow(B_W(j+1,k,1),2.0) + pow(B_W(j+1,k,2), 2.0));
+			B_e = sqrt(pow(B_E(j,k,0),2.0) + pow(B_E(j,k,1),2.0) + pow(B_E(j,k,2), 2.0));
+			B_w = sqrt(pow(B_W(j+1,k,0),2.0) + pow(B_W(j+1,k,1),2.0) + pow(B_W(j+1,k,2), 2.0));
 
-			rho_l = rho_E(j,k);
-			rho_r = rho_W(j+1,k);
+			rho_e = rho_E(j,k);
+			rho_w = rho_W(j+1,k);
 
-			axl = di*Bl/(rho_l*dx_interface(j+1));
-			axr = di*Br/(rho_r*dx_interface(j+1));
-			ax = max(axl, axr);
+			ax_e = di*B_e/(rho_e*dx_interface(j+1));
+			ax_w = di*B_w/(rho_w*dx_interface(j+1));
+			ax = max(ax_e, ax_w);
 
 			Hx_halfp = 0.5*(Ey_wjp1 + Ey_ej) - 0.5*ax*(Bz_wjp1 - Bz_ej);
 
@@ -195,15 +194,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 			Bz_nkm1 = B_N(j,k-1,2);
 			Bz_sk = B_S(j,k,2);
 
-			Bb = sqrt(pow(B_N(j,k-1,0),2.0) + pow(B_N(j,k-1,1),2.0) + pow(B_N(j,k-1,2), 2.0));
-			Bt = sqrt(pow(B_S(j,k,0),2.0) + pow(B_S(j,k,1),2.0) + pow(B_S(j,k,2), 2.0));
+			B_n = sqrt(pow(B_N(j,k-1,0),2.0) + pow(B_N(j,k-1,1),2.0) + pow(B_N(j,k-1,2), 2.0));
+			B_s = sqrt(pow(B_S(j,k,0),2.0) + pow(B_S(j,k,1),2.0) + pow(B_S(j,k,2), 2.0));
 
-			rho_b = rho_N(j,k-1);
-			rho_t = rho_S(j,k);
+			rho_n = rho_N(j,k-1);
+			rho_s = rho_S(j,k);
 
-			ayb = di*Bb/(rho_b*dy_interface(k));
-			ayt = di*Bt/(rho_t*dy_interface(k));
-			ay = max(ayb, ayt);
+			ay_n = di*B_n/(rho_n*dy_interface(k));
+			ay_s = di*B_s/(rho_s*dy_interface(k));
+			ay = max(ay_n, ay_s);
 
 			Hy_halfm = -0.5*(Ex_sk + Ex_nkm1) - 0.5*ay(Bz_sk - Bz_nkm1);
 			
@@ -213,15 +212,15 @@ void CENTPACK::C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S,
 			Bz_nk = B_N(j,k,2);
 			Bz_skp1 = B_S(j,k+1,2);
 
-			Bb = sqrt(pow(B_N(j,k,0),2.0) + pow(B_N(j,k,1),2.0) + pow(B_N(j,k,2), 2.0));
-			Bt = sqrt(pow(B_S(j,k+1,0),2.0) + pow(B_S(j,k+1,1),2.0) + pow(B_S(j,k+1,2), 2.0));
+			B_n = sqrt(pow(B_N(j,k,0),2.0) + pow(B_N(j,k,1),2.0) + pow(B_N(j,k,2), 2.0));
+			B_s = sqrt(pow(B_S(j,k+1,0),2.0) + pow(B_S(j,k+1,1),2.0) + pow(B_S(j,k+1,2), 2.0));
 
-			rho_b = rho_N(j,k);
-			rho_t = rho_S(j,k+1);
+			rho_n = rho_N(j,k);
+			rho_s = rho_S(j,k+1);
 
-			ayb = di*Bb/(rho_b*dy_interface(k+1));
-			ayt = di*Bt/(rho_t*dy_interface(k+1));
-			ay = max(ayb, ayt);
+			ay_n = di*B_n/(rho_n*dy_interface(k+1));
+			ay_s = di*B_s/(rho_s*dy_interface(k+1));
+			ay = max(ay_n, ay_s);
 
 			Hy_halfp = -0.5*(Ex_skp1 + Ex_nk) - 0.5*ay*(Bz_skp1 - Bz_ej);
 			
