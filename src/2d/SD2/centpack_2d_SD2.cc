@@ -151,8 +151,9 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 		t += dt;
 		t_out += dt;
 		
-		evolution_2d_SD2(un, B1_xf, B2_yf, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
-		
+		// evolution_2d_SD2(un, B1_xf, B2_yf, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, id, p);
+		evolution_2d_SD2(un, B1_xf, B2_yf, lambda, mu, dx_cell, dx_interface, dy_cell, dy_interface, alpha, parameters, dt, id, p);
+
 		double max_divB = 0.0;
 		long max_j = -1, max_k = -1;
 		for (k = 2; k < K+2; k++)
@@ -162,11 +163,7 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 							+ (B2_yf(j,k,0) - B2_yf(j,k-1,0)) / dy_cell(k);
 				if (std::fabs(divB) > max_divB) { max_divB = std::fabs(divB); max_j = j; max_k = k; }
 			}
-		if (id == 0) printf("t=%.4f  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, max_divB, max_j, max_k);
-
-		if (max_j > 0 && max_k > 0)
-    	printf("  at max-divB cell: rho=%.3e  Bx_face=%.3e  By_face=%.3e\n",
-           un(max_j,max_k,0), B1_xf(max_j,max_k,0), B2_yf(max_j,max_k,0));
+		
 		
 		if (id == 0) printf("t=%.4f  dt=%.3e  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, dt, max_divB, max_j, max_k);
 

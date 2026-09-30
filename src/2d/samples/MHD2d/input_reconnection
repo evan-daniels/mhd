@@ -13,7 +13,7 @@ K - number of cells in y-direction (total)
 L - components in system
 8
 t_final - simulation time
-5
+25
 dt_out - output interval
 0.5
 cfl - cfl condition scale
@@ -29,4 +29,4 @@ problem - 0-> OT, 1->Reconnection
 eta
 0.009
 di
-0
+1
