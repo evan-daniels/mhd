@@ -8,7 +8,16 @@
 //   (c) Cx_em, Cy_em: Faraday increments for Bx and By face arrays
 //   (d) Cz_em: FV increment for cell-centered Bz (using upwinded Ey, Ex)
 //
-// Upwinding speed is the whistler phase speed: di * |B| / (rho * dx)
+// Upwinding speed: Alfven + whistler,  |B|/sqrt(rho) + di*|B|/(rho*dx)
+// (the Alfven term supplies dissipation when di = 0; without it the
+//  forward-Euler EM update is centered and unconditionally unstable)
+//
+// ywall = 1 (reconnection): perfectly conducting walls at the y-boundaries.
+//   Tangential E vanishes on a conductor, so
+//     - Ez = 0 at the wall corners (k = 1 bottom, k = K+1 top): By on the wall
+//       faces then never changes, keeping normal B = 0 and div B ~ 0 next to the wall
+//     - Ex = 0 on the wall y-faces: zero y-flux of Bz through the wall
+// ywall = 0: periodic in y (Orszag-Tang), unchanged behavior.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +35,8 @@ void CENTPACK::C_flux_em(
     const doublearray1d& lambda_em, const doublearray1d& mu_em,
     const doublearray1d& dx_interface, const doublearray1d& dy_interface,
     const double& di,
-    doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em)
+    doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em,
+    const int& ywall)
 {
     long j, k, J, K;
     J = B_N.getIndex1Size() - 4;
@@ -52,8 +62,10 @@ void CENTPACK::C_flux_em(
             Br = sqrt(B_W(j+1,k,0)*B_W(j+1,k,0) + B_W(j+1,k,1)*B_W(j+1,k,1) + B_W(j+1,k,2)*B_W(j+1,k,2));
             rl = std::max(rho_E(j,k), 0.1);
             rr = std::max(rho_W(j+1,k), 0.1);
-            al = di * Bl / (rl * dx_interface(j));
-            ar = di * Br / (rr * dx_interface(j));
+            // al = di * Bl / (rl * dx_interface(j)); ORIGINAL
+            // ar = di * Br / (rr * dx_interface(j)); ORIGINAL
+            al = Bl / sqrt(rl) + di * Bl / (rl * dx_interface(j));
+            ar = Br / sqrt(rr) + di * Br / (rr * dx_interface(j));
             ax = std::max(al, ar);
 
             // Ez: dBy/dt = +dEz/dx, so flux of By is -Ez
@@ -78,8 +90,10 @@ void CENTPACK::C_flux_em(
             Bt = sqrt(B_S(j,k+1,0)*B_S(j,k+1,0) + B_S(j,k+1,1)*B_S(j,k+1,1) + B_S(j,k+1,2)*B_S(j,k+1,2));
             rb = std::max(rho_N(j,k), 0.1);
             rt = std::max(rho_S(j,k+1), 0.1);
-            ab = di * Bb / (rb * dy_interface(k));
-            at_v = di * Bt / (rt * dy_interface(k));
+            // ab = di * Bb / (rb * dy_interface(k)); ORIGINAL
+            // at_v = di * Bt / (rt * dy_interface(k)); ORIGINAL
+            ab   = Bb / sqrt(rb) + di * Bb / (rb * dy_interface(k));
+            at_v = Bt / sqrt(rt) + di * Bt / (rt * dy_interface(k));
             ay = std::max(ab, at_v);
 
             // Ez: dBx/dt = -dEz/dy, so flux of Bx is +Ez
@@ -94,11 +108,33 @@ void CENTPACK::C_flux_em(
         }
     }
 
+    // Conducting walls: Ex = 0 on the wall y-faces (bottom k = 1, top k = K+1)
+    // -> no flux of Bz through the wall
+    if (ywall == 1)
+    {
+        for (j = 1; j < J+3; j++)
+        {
+            Gy_yf(j,1)   = 0.0;
+            Gy_yf(j,K+1) = 0.0;
+        }
+    }
+
     // ===== (c) Corner Ez: 4-point average of surrounding face values =====
     for (k = 1; k < K+2; k++)
         for (j = 1; j < J+2; j++)
             Ez_corner(j,k) = 0.25*(Ez_xf(j,k) + Ez_xf(j,k+1)
                                   + Ez_yf(j,k) + Ez_yf(j+1,k));
+
+    // Conducting walls: Ez = 0 at the wall corners (bottom k = 1, top k = K+1)
+    // -> By on the wall faces stays 0, Bx next to the wall sees the conductor
+    if (ywall == 1)
+    {
+        for (j = 1; j < J+2; j++)
+        {
+            Ez_corner(j,1)   = 0.0;
+            Ez_corner(j,K+1) = 0.0;
+        }
+    }
 
     // ===== (d) Cx_em: Bx face increment, dBx/dt = -dEz/dy =====
     for (k = 2; k < K+2; k++)

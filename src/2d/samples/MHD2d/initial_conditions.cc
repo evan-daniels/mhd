@@ -74,6 +74,58 @@ void CENTPACK::initial_conditions(doublearray3d& un, const doublearray1d& parame
   double gamma = parameters(0);
   int problem = (int) parameters(1); // 0->OT, 1->Reconnection
 
+  // ============================================================================
+// problem 2: linear whistler / ion-cyclotron dispersion test
+// ----------------------------------------------------------------------------
+// Paste this block into initial_conditions.cc, BEFORE the existing branches
+// (so problem == 2 does not fall through into the reconnection setup).
+//
+// Uniform plasma, B0 along x, small By made of modes k_m = m*2*pi/Lx (m = 1..M),
+// v = 0, Bz = 0. In Hall MHD each mode splits into whistler (R) and
+// ion-cyclotron (L) waves:
+//     omega_R,L = k vA [ sqrt(1 + (k di/2)^2) +/- k di/2 ],   vA = B0/sqrt(rho0) = 1
+// With di = 0 both collapse to Alfven waves (omega = k) and Bz stays zero.
+//
+// Uniform in y, so Bx = B0 and dBy/dy = 0: the CT face seeding gives div B = 0 exactly.
+// ============================================================================
+
+	if (problem == 2)
+	{
+		const double pi    = acos(-1.0);
+		const double Lx    = 2.0*pi;     // MUST equal x_right - x_left in input_whistler
+		const double rho0  = 1.0;
+		const double p0    = 0.1;
+		const double B0    = 1.0;
+		const int    M     = 12;         // modes k = 1..12 (k di up to 6 at di = 0.5)
+		const double eps   = 2.0e-4;     // amplitude per mode; total << B0 keeps it linear
+
+		long Jt = un.getIndex1Size();    // includes ghost cells
+		long Kt = un.getIndex2Size();
+
+		for (long j = 0; j < Jt; j++)
+		{
+			// fixed pseudo-random phases: identical on every rank
+			double by = 0.0;
+			for (int m = 1; m <= M; m++)
+				by += eps*cos(2.0*pi*m*x_cell(j)/Lx + 0.7*m*m);
+
+			for (long k = 0; k < Kt; k++)
+			{
+				un(j,k,0) = rho0;
+				un(j,k,1) = 0.0;
+				un(j,k,2) = 0.0;
+				un(j,k,3) = 0.0;
+				un(j,k,4) = B0;
+				un(j,k,5) = by;
+				un(j,k,6) = 0.0;
+				// CHECK: use the SAME energy formula as your reconnection branch
+				// (this assumes U = p/(gamma-1) + rho v^2/2 + B^2/2)
+				un(j,k,7) = p0/(gamma - 1.0) + 0.5*(B0*B0 + by*by);
+			}
+		}
+		return;
+	}
+
   if (problem == 0)
   {
   
@@ -101,8 +153,8 @@ else if (problem == 1)
 {
     double B0     = 1.0;
     double n0     = 1.0;
-    // double nb     = 0.2; original
-    double nb = 0.5;
+    // double nb     = 0.2; original && also the GEM value
+    double nb = 0.5; // Why did we use this?
     double lambda = 0.5;
     double psi0   = 0.1;
     double Lx     = 19.6;

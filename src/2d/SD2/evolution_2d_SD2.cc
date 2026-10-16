@@ -6,10 +6,10 @@
 // B advances with a constrained-transport EM solver that sub-cycles on the
 // whistler CFL. The EM sub-cycles are interleaved with the fluid RK stages:
 //
-//   fluid stage 1 (t^n state)          -> un(fluid) += C0
-//   EM sub-cycle  0        -> dt/2      (rho, v frozen at t^n interface values)
-//   fluid stage 2 (stage-1 state)      -> un(fluid) += 0.5*(C1 - C0)
-//   EM sub-cycle  dt/2     -> dt        (rho, v frozen at stage-1 interface values)
+//   Strang / Verlet splitting:
+//   EM sub-cycle  0    -> dt/2   (rho, v frozen at t^n interface values)
+//   fluid SSP-RK2 full dt        (B frozen at t^{n+1/2})
+//   EM sub-cycle  dt/2 -> dt     (rho, v frozen at t^{n+1} interface values)
 //
 // un layout (8 components):
 //   0 rho, 1-3 rho*v, 4-6 B (cell centered), 7 total energy
@@ -41,7 +41,12 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
 
     const double eta    = parameters(2);
     const double di     = parameters(3);
-    const double cfl_em = 0.4;
+    const bool   walls  = ((int) parameters(1) == 1);   // reconnection: conducting walls in y
+    const int    yw_J   = walls ? 3 : 0;                  // ghost-fill modes for boundary_conditions_ct
+    const int    yw_Bx  = walls ? 1 : 0;
+    const int    yw_By  = walls ? 2 : 0;
+    // const double cfl_em = 0.4;
+    const double cfl_em = .2;
 
     // Fluid components updated by the central scheme (B = 4,5,6 excluded)
     const int n_fluid = 5;
@@ -67,7 +72,7 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
     double t_em = 0.0;
 
     // ------------------------------------------------------------------------
-    // J = curl B on the interior; ghosts filled by periodic-y / MPI-x exchange
+    // J = curl B on the interior; ghosts filled by y-boundary (periodic or wall) / MPI-x exchange
     // ------------------------------------------------------------------------
     auto compute_J = [&]()
     {
@@ -80,7 +85,7 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
                 Jc(j,k,2) =  (un(j+1,k,5) - un(j-1,k,5))/(2.0*dx)
                            - (un(j,k+1,4) - un(j,k-1,4))/(2.0*dy);
             }
-        boundary_conditions_ct(Jc, id, p);
+        boundary_conditions_ct(Jc, id, p, yw_J);
     };
 
     // ------------------------------------------------------------------------
@@ -144,7 +149,7 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
                            E_N, E_S, E_E, E_W, di, eta);
             C_flux_em(rho_N, rho_S, rho_E, rho_W, B_N, B_S, B_E, B_W,
                       E_N, E_S, E_E, E_W, lambda_em, mu_em,
-                      dx_interface, dy_interface, di, Cx_em, Cy_em, Cz_em);
+                      dx_interface, dy_interface, di, Cx_em, Cy_em, Cz_em, walls ? 1 : 0);
 
             // --- Faraday update: faces for Bx, By; cell centers for Bz ---
             for (k = 2; k < K+2; k++)
@@ -155,8 +160,8 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
                     un(j,k,6)    += Cz_em(j,k);
                 }
 
-            boundary_conditions_ct(B1_xf, id, p);
-            boundary_conditions_ct(B2_yf, id, p);
+            boundary_conditions_ct(B1_xf, id, p, yw_Bx);
+            boundary_conditions_ct(B2_yf, id, p, yw_By);
 
             // --- recover cell-centered Bx, By from faces ---
             for (k = 2; k < K+2; k++)
@@ -175,15 +180,24 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
         if (id == 0) printf("  EM sub-steps: %d\n", nsub);
 
     };
-    
+
     // ========================================================================
-    // Fluid RK stage 1 (state at t^n)
+    // Strang / Verlet splitting (symmetric, neutrally stable for Alfven waves):
+    //   EM   0    -> dt/2   with rho, v frozen at t^n
+    //   fluid RK2 full dt   with B frozen at t^{n+1/2}
+    //   EM   dt/2 -> dt     with rho, v frozen at t^{n+1}
+    // (the old interleaving had |amplification| > 1 for every k: growth ~ k^2 dt / 8)
     // ========================================================================
-    compute_J();
+
+    // ---- EM half step 1: v at t^n ----
     reconstruction_2d_SD2(un, u_N, u_S, u_E, u_W, dx_cell, dx_interface, dy_cell, dy_interface, alpha);
     freeze_fluid();
-    C_flux_2d_SD2(u_N, u_S, u_E, u_W, lambda, mu, parameters, Jc, C0);
+    em_subcycle(0.5*dt_fluid);
 
+    // ---- fluid RK2, B frozen at t^{n+1/2} ----
+    compute_J();
+    reconstruction_2d_SD2(un, u_N, u_S, u_E, u_W, dx_cell, dx_interface, dy_cell, dy_interface, alpha);
+    C_flux_2d_SD2(u_N, u_S, u_E, u_W, lambda, mu, parameters, Jc, C0);
     for (int n = 0; n < n_fluid; n++)
     {
         l = fluid_comp[n];
@@ -193,19 +207,8 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
     }
     boundary_conditions(un, parameters, id, p);
 
-    // ========================================================================
-    // EM sub-cycle 1: 0 -> dt/2, rho and v frozen at t^n interface values
-    // ========================================================================
-    em_subcycle(0.5*dt_fluid);
-
-    // ========================================================================
-    // Fluid RK stage 2 (stage-1 fluid, B at t^n + dt/2)
-    // ========================================================================
-    compute_J();
     reconstruction_2d_SD2(un, u_N, u_S, u_E, u_W, dx_cell, dx_interface, dy_cell, dy_interface, alpha);
-    freeze_fluid();
-    C_flux_2d_SD2(u_N, u_S, u_E, u_W, lambda, mu, parameters, Jc, C1);
-
+    C_flux_2d_SD2(u_N, u_S, u_E, u_W, lambda, mu, parameters, Jc, C1);   // same Jc: B unchanged
     for (int n = 0; n < n_fluid; n++)
     {
         l = fluid_comp[n];
@@ -215,8 +218,8 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
     }
     boundary_conditions(un, parameters, id, p);
 
-    // ========================================================================
-    // EM sub-cycle 2: dt/2 -> dt, rho and v frozen at stage-1 interface values
-    // ========================================================================
+    // ---- EM half step 2: v at t^{n+1} ----
+    reconstruction_2d_SD2(un, u_N, u_S, u_E, u_W, dx_cell, dx_interface, dy_cell, dy_interface, alpha);
+    freeze_fluid();
     em_subcycle(dt_fluid);
 }

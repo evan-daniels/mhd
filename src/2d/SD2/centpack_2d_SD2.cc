@@ -119,8 +119,10 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 			B2_yf(j,k,0) = 0.5*(un(j,k,5) + un(j,k+1,5));
 		}
 
-	boundary_conditions_ct(B1_xf, id, p);
-	boundary_conditions_ct(B2_yf, id, p);
+	// reconnection (problem 1): conducting walls in y; Orszag-Tang (problem 0): periodic
+	int ywalls = ((int) parameters(1) == 1);
+	boundary_conditions_ct(B1_xf, id, p, ywalls ? 1 : 0);
+	boundary_conditions_ct(B2_yf, id, p, ywalls ? 2 : 0);
 		
 	writeout(un, t, parameters, n, id, p);
 
@@ -166,12 +168,6 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 		
 		
 		if (id == 0) printf("t=%.4f  dt=%.3e  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, dt, max_divB, max_j, max_k);
-
-		// resistivity_step(un, dx_cell, dy_cell, dt, parameters);
-		// hall_step(un, dx_cell, dy_cell, dt, parameters);
-		// int nsub = 50;
-		// for (int isub = 0; isub < nsub; isub++)
-		// 	hall_step(un, dx_cell, dy_cell, dt/nsub, parameters);
 		
 		dt_cpu = (clock() - t_start)/CLOCKS_PER_SEC;
 		sum_t = sum_t + dt_cpu;

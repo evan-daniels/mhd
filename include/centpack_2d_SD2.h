@@ -69,13 +69,15 @@ namespace CENTPACK
 
 	void boundary_conditions(doublearray3d& u, const doublearray1d& parameters, const int& id, const int& p);
 
-	void boundary_conditions_ct(doublearray3d& f, const int& id, const int& p);
+	// void boundary_conditions_ct(doublearray3d& f, const int& id, const int& p);
+	void boundary_conditions_ct(doublearray3d& f, const int& id, const int& p, const int& ywall = 0);
 
 	void reconstruction_em(const doublearray3d& un, const doublearray3d& Jc, const doublearray3d& B1_xf, const doublearray3d& B2_yf, doublearray3d& B_N, doublearray3d& B_S, doublearray3d& B_E, doublearray3d& B_W, doublearray3d& Jc_N, doublearray3d& Jc_S, doublearray3d& Jc_E, doublearray3d& Jc_W, const doublearray1d& dx_cell, const doublearray1d& dx_interface, const doublearray1d& dy_cell, const doublearray1d& dy_interface, const double& alpha);
 
 	void electric_field(const doublearray2d& rho_N, const doublearray2d& rho_S, const doublearray2d& rho_E, const doublearray2d& rho_W, const doublearray3d& v_N, const doublearray3d& v_S, const doublearray3d& v_E, const doublearray3d& v_W, const doublearray3d& B_N, const doublearray3d& B_S, const doublearray3d& B_E, const doublearray3d& B_W, const doublearray3d& J_N, const doublearray3d& J_S, const doublearray3d& J_E, const doublearray3d& J_W, doublearray3d& E_N, doublearray3d& E_S, doublearray3d& E_E, doublearray3d& E_W, const double& di, const double& eta);
 
-	void C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S, const doublearray2d& rho_E, const doublearray2d& rho_W, const doublearray3d& B_N, const doublearray3d& B_S, const doublearray3d& B_E, const doublearray3d& B_W, const doublearray3d& E_N, const doublearray3d& E_S, const doublearray3d& E_E, const doublearray3d& E_W, const doublearray1d& lambda_em, const doublearray1d& mu_em, const doublearray1d& dx_interface, const doublearray1d& dy_interface, const double& di, doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em);
+	// void C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S, const doublearray2d& rho_E, const doublearray2d& rho_W, const doublearray3d& B_N, const doublearray3d& B_S, const doublearray3d& B_E, const doublearray3d& B_W, const doublearray3d& E_N, const doublearray3d& E_S, const doublearray3d& E_E, const doublearray3d& E_W, const doublearray1d& lambda_em, const doublearray1d& mu_em, const doublearray1d& dx_interface, const doublearray1d& dy_interface, const double& di, doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em);
+	void C_flux_em(const doublearray2d& rho_N, const doublearray2d& rho_S, const doublearray2d& rho_E, const doublearray2d& rho_W, const doublearray3d& B_N, const doublearray3d& B_S, const doublearray3d& B_E, const doublearray3d& B_W, const doublearray3d& E_N, const doublearray3d& E_S, const doublearray3d& E_E, const doublearray3d& E_W, const doublearray1d& lambda_em, const doublearray1d& mu_em, const doublearray1d& dx_interface, const doublearray1d& dy_interface, const double& di, doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em, const int& ywall=0);
 
 	void spectral_radii_em(const doublearray1d& u, const double& dx, const double& dy, const double& di, double& rx, double& ry);
 
