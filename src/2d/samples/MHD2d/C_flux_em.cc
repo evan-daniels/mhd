@@ -37,7 +37,14 @@ void CENTPACK::C_flux_em(
     const double& di,
     doublearray2d& Cx_em, doublearray2d& Cy_em, doublearray2d& Cz_em,
     const int& ywall)
+
 {
+
+    // fraction of whistler speed in the LxF upwinding:
+    //   1.0 = old behaviour (needed with forward-Euler EM)
+    //   0.0 = Alfven-only upwinding (relies on RK3 EM sub-cycle for whistler stability)
+    const double c_whistler = 0.0;
+
     long j, k, J, K;
     J = B_N.getIndex1Size() - 4;
     K = B_N.getIndex2Size() - 4;
@@ -64,8 +71,12 @@ void CENTPACK::C_flux_em(
             rr = std::max(rho_W(j+1,k), 0.1);
             // al = di * Bl / (rl * dx_interface(j)); ORIGINAL
             // ar = di * Br / (rr * dx_interface(j)); ORIGINAL
-            al = Bl / sqrt(rl) + di * Bl / (rl * dx_interface(j));
-            ar = Br / sqrt(rr) + di * Br / (rr * dx_interface(j));
+            // al = Bl / sqrt(rl) + di * Bl / (rl * dx_interface(j));
+            // ar = Br / sqrt(rr) + di * Br / (rr * dx_interface(j));
+            al = Bl / sqrt(rl) + c_whistler * di * Bl / (rl * dx_interface(j));
+            ar = Br / sqrt(rr) + c_whistler * di * Br / (rr * dx_interface(j));
+
+
             ax = std::max(al, ar);
 
             // Ez: dBy/dt = +dEz/dx, so flux of By is -Ez
@@ -92,8 +103,12 @@ void CENTPACK::C_flux_em(
             rt = std::max(rho_S(j,k+1), 0.1);
             // ab = di * Bb / (rb * dy_interface(k)); ORIGINAL
             // at_v = di * Bt / (rt * dy_interface(k)); ORIGINAL
-            ab   = Bb / sqrt(rb) + di * Bb / (rb * dy_interface(k));
-            at_v = Bt / sqrt(rt) + di * Bt / (rt * dy_interface(k));
+            // ab   = Bb / sqrt(rb) + di * Bb / (rb * dy_interface(k));
+            // at_v = Bt / sqrt(rt) + di * Bt / (rt * dy_interface(k));
+            ab   = Bb / sqrt(rb) + c_whistler * di * Bb / (rb * dy_interface(k));
+            at_v = Bt / sqrt(rt) + c_whistler * di * Bt / (rt * dy_interface(k));
+
+
             ay = std::max(ab, at_v);
 
             // Ez: dBx/dt = -dEz/dy, so flux of Bx is +Ez
