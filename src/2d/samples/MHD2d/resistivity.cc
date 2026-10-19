@@ -2,6 +2,8 @@
 #include <cmath>
 using namespace std;
 
+// NOTE: currently unused (dead code). Resistivity is applied via eta in the EM
+// electric field; calling resistivity_step as well would apply eta twice.
 void CENTPACK::resistivity_step(doublearray3d& un, const doublearray1d& dx_cell,
                                 const doublearray1d& dy_cell, double dt,
                                 const doublearray1d& parameters)
@@ -45,6 +47,8 @@ void CENTPACK::resistivity_step(doublearray3d& un, const doublearray1d& dx_cell,
     un = un_new;
 }
 
+// NOTE: currently unused (dead code). The Hall term is handled in the EM
+// sub-cycle (electric_field / C_flux_em).
 void CENTPACK::hall_step(doublearray3d& un, const doublearray1d& dx_cell,
                          const doublearray1d& dy_cell, double dt,
                          const doublearray1d& parameters)
