@@ -3,6 +3,8 @@
 
 using namespace std;
 
+const bool USE_NONIDEAL_POYNTING = true;   // TEMP switch: include (E_n x B) in energy flux
+
 void CENTPACK::flux_y(const doublearray1d& u, const doublearray1d& parameters, const doublearray1d& j_here, doublearray1d& g)
 {
     double p, p_star;
@@ -15,6 +17,14 @@ void CENTPACK::flux_y(const doublearray1d& u, const doublearray1d& parameters, c
     double Bx  = u(4);
     double By  = u(5);
     double Bz  = u(6);
+
+    // Non-ideal Poynting flux (Eq. 1.1d): E_n = (di/rho) J x B + eta J
+    const double eta = parameters(2), di = parameters(3);
+    const double Jx = j_here(0), Jy = j_here(1), Jz = j_here(2);
+    const double rho_eff = std::max(rho, 0.1);          // same floor as electric_field / C_flux_em
+    const double Enx = di/rho_eff*(Jy*Bz - Jz*By) + eta*Jx;
+    const double Eny = di/rho_eff*(Jz*Bx - Jx*Bz) + eta*Jy;
+    const double Enz = di/rho_eff*(Jx*By - Jy*Bx) + eta*Jz;
 
     p      = (gamma-1.0)*(u(7) - 0.5*(u(1)*vx + u(2)*vy + u(3)*vz)
            - 0.5*(Bx*Bx + By*By + Bz*Bz));
@@ -29,6 +39,10 @@ void CENTPACK::flux_y(const doublearray1d& u, const doublearray1d& parameters, c
     g(4) = Bx*vy - By*vx;                  // Bx induction (unused)
     g(5) = 0.0;                            // By induction (unused)
     g(6) = Bz*vy - By*vz;                  // Bz induction (unused)
-    g(7) = (u(7) + p_star)*vy
-         - By*(Bx*vx + By*vy + Bz*vz);     // energy flux
+//     g(7) = (u(7) + p_star)*vy
+//          - By*(Bx*vx + By*vy + Bz*vz);     // energy flux
+    g(7) = (u(7) + p_star)*vy - By*(Bx*vx + By*vy + Bz*vz);
+    if (USE_NONIDEAL_POYNTING) {
+        g(7) += (Enz*Bx - Enx*Bz);               // + (E_n x B)_y
+    }
 }

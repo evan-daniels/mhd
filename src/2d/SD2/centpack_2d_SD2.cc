@@ -121,8 +121,21 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 
 	// reconnection (problem 1): conducting walls in y; Orszag-Tang (problem 0): periodic
 	int ywalls = ((int) parameters(1) == 1);
+
 	boundary_conditions_ct(B1_xf, id, p, ywalls ? 1 : 0);
 	boundary_conditions_ct(B2_yf, id, p, ywalls ? 2 : 0);
+
+	// div B at t = 0 (all ranks)
+	{
+		double m = 0.0;
+		for (k = 2; k < K+2; k++)
+			for (j = 2; j < J+2; j++)
+				m = std::max(m, std::fabs((B1_xf(j,k,0) - B1_xf(j-1,k,0))/dx_cell(j)
+				                        + (B2_yf(j,k,0) - B2_yf(j,k-1,0))/dy_cell(k)));
+		double mg;
+		MPI_Allreduce(&m, &mg, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+		if (id == 0) printf("t=0  max|div B| (all ranks) = %.3e\n", mg);
+	}
 		
 	writeout(un, t, parameters, n, id, p);
 
@@ -165,9 +178,30 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 							+ (B2_yf(j,k,0) - B2_yf(j,k-1,0)) / dy_cell(k);
 				if (std::fabs(divB) > max_divB) { max_divB = std::fabs(divB); max_j = j; max_k = k; }
 			}
-		
-		
-		if (id == 0) printf("t=%.4f  dt=%.3e  max|div B| = %.3e  at (j,k)=(%ld,%ld)\n", t, dt, max_divB, max_j, max_k);
+
+		// min rho and min thermal pressure over interior cells, all ranks (diagnostic only)
+		double min_rho_loc = 1.0e300, min_p_loc = 1.0e300;
+		gamma = parameters(0);
+		for (k = 2; k < K+2; k++)
+			for (j = 2; j < J+2; j++)
+			{
+				double r  = un(j,k,0);
+				double m2 = un(j,k,1)*un(j,k,1) + un(j,k,2)*un(j,k,2) + un(j,k,3)*un(j,k,3);
+				double b2 = un(j,k,4)*un(j,k,4) + un(j,k,5)*un(j,k,5) + un(j,k,6)*un(j,k,6);
+				double pr = (gamma - 1.0)*(un(j,k,7) - 0.5*m2/r - 0.5*b2);
+				min_rho_loc = std::min(min_rho_loc, r);
+				min_p_loc   = std::min(min_p_loc, pr);
+			}
+		double min_loc[2] = {min_rho_loc, min_p_loc}, min_glb[2];
+		MPI_Allreduce(min_loc, min_glb, 2, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+
+		// global max|div B| (all ranks) and its location: MAXLOC gives the owning rank, which broadcasts (j,k)
+		struct { double val; int rank; } divB_loc = {max_divB, id}, divB_glb;
+		MPI_Allreduce(&divB_loc, &divB_glb, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+		long jk[2] = {max_j, max_k};
+		MPI_Bcast(jk, 2, MPI_LONG, divB_glb.rank, MPI_COMM_WORLD);
+
+		if (id == 0) printf("t=%.4f  dt=%.3e  max|div B| = %.3e  at (rank,j,k)=(%d,%ld,%ld)  min rho = %.3e  min p = %.3e\n", t, dt, divB_glb.val, divB_glb.rank, jk[0], jk[1], min_glb[0], min_glb[1]);
 		
 		dt_cpu = (clock() - t_start)/CLOCKS_PER_SEC;
 		sum_t = sum_t + dt_cpu;
