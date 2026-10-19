@@ -128,18 +128,18 @@ void CENTPACK::initial_conditions(doublearray3d& un, const doublearray1d& parame
 
   if (problem == 0)
   {
-  
+
 	for (k = 0; k < K+4; k++)
 	{
 		for (j = 0; j < J+4; j++)
 		{
 			un(j,k,0) = pow(gamma,2.0);
 			un(j,k,1) = un(j,k,0)*(1.0/dy_cell(k))*(cos(y(k+1)) - cos(y(k)));
-			un(j,k,2) = 0.0;
-			un(j,k,3) = -un(j,k,0)*(1.0/dx_cell(j))*(cos(x(j+1)) - cos(x(j)));
+			un(j,k,2) = -un(j,k,0)*(1.0/dx_cell(j))*(cos(x(j+1)) - cos(x(j)));
+			un(j,k,3) = 0.0;
 			un(j,k,4) = (1.0/dy_cell(k))*(cos(y(k+1)) - cos(y(k)));
-			un(j,k,5) = 0.0;
-			un(j,k,6) = (-1.0/(2.0*dx_cell(j)))*(cos(2.0*x(j+1)) - cos(2.0*x(j)));
+			un(j,k,5) = (-1.0/(2.0*dx_cell(j)))*(cos(2.0*x(j+1)) - cos(2.0*x(j)));
+			un(j,k,6) = 0.0;
 			
 			I1 = -(0.125/dy_cell(k))*(un(j,k,0) + 1.0)*(sin(2.0*y(k+1)) - sin(2.0*y(k)));
 			I2 = -(0.125/dx_cell(j))*un(j,k,0)*(sin(2.0*x(j+1)) - sin(2.0*x(j)));
