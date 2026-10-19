@@ -126,6 +126,35 @@ void CENTPACK::initial_conditions(doublearray3d& un, const doublearray1d& parame
 		return;
 	}
 
+	// problem 3: resistive decay, periodic box [0,2pi]^2
+	//   B = B0 (0, sin x, cos x), v = 0, rho = 1, p = p0
+	//   |B| uniform -> force-free, so B decays as exp(-eta t) with p, v unchanged
+	//   (plus Ohmic heating). Cell averages as in problem 0.
+	if (problem == 3)
+	{
+		const double B0 = 1.0;
+		const double p0 = 1.0;
+
+		for (k = 0; k < K+4; k++)
+		{
+			for (j = 0; j < J+4; j++)
+			{
+				double By = -B0*(1.0/dx_cell(j))*(cos(x(j+1)) - cos(x(j)));   // <sin x>
+				double Bz =  B0*(1.0/dx_cell(j))*(sin(x(j+1)) - sin(x(j)));   // <cos x>
+
+				un(j,k,0) = 1.0;
+				un(j,k,1) = 0.0;
+				un(j,k,2) = 0.0;
+				un(j,k,3) = 0.0;
+				un(j,k,4) = 0.0;
+				un(j,k,5) = By;
+				un(j,k,6) = Bz;
+				un(j,k,7) = p0/(gamma - 1.0) + 0.5*(By*By + Bz*Bz);
+			}
+		}
+		return;
+	}
+
   if (problem == 0)
   {
 
