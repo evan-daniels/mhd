@@ -122,8 +122,43 @@ int CENTPACK::centpack_2d_SD2(int id, int p)
 	// reconnection (problem 1): conducting walls in y; Orszag-Tang (problem 0): periodic
 	int ywalls = ((int) parameters(1) == 1);
 
+	if (ywalls)
+	{
+		// GEM / reconnection: seed faces from the flux function at cell corners,
+		//   Bx = d(psi)/dy,  By = -d(psi)/dx   ->  discrete div B = 0 to round-off.
+		//   psi MUST match initial_conditions.cc (problem 1):
+		//   psi = lambda*ln cosh(y/lambda) + psi0*cos(2 pi x/Lx)*cos(pi y/Ly)
+		const double lam = 0.5, psi0 = 0.1, Lx = 25.6, Ly = 12.8;
+		auto psi = [&](double xx, double yy)
+		{
+			return lam*log(cosh(yy/lam)) + psi0*cos(2.0*M_PI*xx/Lx)*cos(M_PI*yy/Ly);
+		};
+		for (k = 0; k < K+4; k++)
+			for (j = 0; j < J+4; j++)
+			{
+				B1_xf(j,k,0) =  (psi(x(j+1), y(k+1)) - psi(x(j+1), y(k))) / dy_cell(k);
+				B2_yf(j,k,0) = -(psi(x(j+1), y(k+1)) - psi(x(j),   y(k+1))) / dx_cell(j);
+			}
+	}
+	
 	boundary_conditions_ct(B1_xf, id, p, ywalls ? 1 : 0);
 	boundary_conditions_ct(B2_yf, id, p, ywalls ? 2 : 0);
+
+	// make cell-centered Bx, By consistent with the faces, keeping pressure unchanged
+	if (ywalls)
+	{
+		for (k = 2; k < K+2; k++)
+			for (j = 2; j < J+2; j++)
+			{
+				double bx_new = 0.5*(B1_xf(j,k,0) + B1_xf(j-1,k,0));
+				double by_new = 0.5*(B2_yf(j,k,0) + B2_yf(j,k-1,0));
+				un(j,k,7) += 0.5*(bx_new*bx_new + by_new*by_new
+				                - un(j,k,4)*un(j,k,4) - un(j,k,5)*un(j,k,5));
+				un(j,k,4) = bx_new;
+				un(j,k,5) = by_new;
+			}
+		boundary_conditions(un, parameters, id, p);
+	}
 
 	// div B at t = 0 (all ranks)
 	{

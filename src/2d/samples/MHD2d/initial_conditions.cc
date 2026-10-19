@@ -180,14 +180,23 @@ void CENTPACK::initial_conditions(doublearray3d& un, const doublearray1d& parame
 
 else if (problem == 1)
 {
+    // double B0     = 1.0;
+    // double n0     = 1.0;
+    // // double nb     = 0.2; original && also the GEM value
+    // double nb = 0.5; // Why did we use this?
+    // double lambda = 0.5;
+    // double psi0   = 0.1;
+    // double Lx     = 19.6;
+    // double Ly     = 19.6;
+
+	// GEM challenge (Birn et al. 2001): lengths in d_i, time in 1/Omega_ci, B in B0
     double B0     = 1.0;
     double n0     = 1.0;
-    // double nb     = 0.2; original && also the GEM value
-    double nb = 0.5; // Why did we use this?
+    double nb     = 0.2;     // GEM background density
     double lambda = 0.5;
     double psi0   = 0.1;
-    double Lx     = 19.6;
-    double Ly     = 19.6;
+    double Lx     = 25.6;    // MUST equal x_right - x_left
+    double Ly     = 12.8;    // MUST equal y_top  - y_bottom
 
     for (k = 0; k < K+4; k++)
     {
