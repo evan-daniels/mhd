@@ -10,6 +10,7 @@
 //   EM sub-cycle  0    -> dt/2   (rho, v frozen at t^n interface values)
 //   fluid SSP-RK2 full dt        (B frozen at t^{n+1/2})
 //   EM sub-cycle  dt/2 -> dt     (rho, v frozen at t^{n+1} interface values)
+//   EM sub-cycles use SSP-RK3 (whistler-stable without upwind damping)
 //
 // un layout (8 components):
 //   0 rho, 1-3 rho*v, 4-6 B (cell centered), 7 total energy
@@ -68,6 +69,8 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
     doublearray2d Cx_em(J+4,K+4), Cy_em(J+4,K+4), Cz_em(J+4,K+4);
     doublearray1d lambda_em(J+4), mu_em(K+4);
     doublearray1d u_cell(L);
+    
+    doublearray2d Bx0(J+4,K+4), By0(J+4,K+4), Bz0(J+4,K+4);   // RK3 base state
 
     double t_em = 0.0;
 
@@ -109,7 +112,52 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
     };
 
     // ------------------------------------------------------------------------
-    // EM sub-cycle: forward Euler steps from the current t_em up to t_target
+    // EM right-hand side: Cx_em, Cy_em, Cz_em from the current B and frozen rho, v
+    // (lambda_em, mu_em must already hold dt_em/dx, dt_em/dy)
+    // ------------------------------------------------------------------------
+    auto em_rhs = [&]()
+    {
+        compute_J();
+        reconstruction_em(un, Jc, B1_xf, B2_yf, B_N, B_S, B_E, B_W,
+                          J_N, J_S, J_E, J_W,
+                          dx_cell, dx_interface, dy_cell, dy_interface, alpha);
+        electric_field(rho_N, rho_S, rho_E, rho_W, v_N, v_S, v_E, v_W,
+                       B_N, B_S, B_E, B_W, J_N, J_S, J_E, J_W,
+                       E_N, E_S, E_E, E_W, di, eta);
+        C_flux_em(rho_N, rho_S, rho_E, rho_W, B_N, B_S, B_E, B_W,
+                  E_N, E_S, E_E, E_W, lambda_em, mu_em,
+                  dx_interface, dy_interface, di, Cx_em, Cy_em, Cz_em, walls ? 1 : 0);
+    };
+
+    // ------------------------------------------------------------------------
+    // SSP-RK stage:  B <- a0 * B0 + a1 * (B + C)     (each stage is a CT update,
+    // so div B is preserved exactly), then ghosts and cell-centered Bx, By
+    // ------------------------------------------------------------------------
+    auto em_stage = [&](double a0, double a1)
+    {
+        for (k = 2; k < K+2; k++)
+            for (j = 2; j < J+2; j++)
+            {
+                B1_xf(j,k,0) = a0*Bx0(j,k) + a1*(B1_xf(j,k,0) + Cx_em(j,k));
+                B2_yf(j,k,0) = a0*By0(j,k) + a1*(B2_yf(j,k,0) + Cy_em(j,k));
+                un(j,k,6)    = a0*Bz0(j,k) + a1*(un(j,k,6)    + Cz_em(j,k));
+            }
+
+        boundary_conditions_ct(B1_xf, id, p, yw_Bx);
+        boundary_conditions_ct(B2_yf, id, p, yw_By);
+
+        for (k = 2; k < K+2; k++)
+            for (j = 2; j < J+2; j++)
+            {
+                un(j,k,4) = 0.5*(B1_xf(j,k,0) + B1_xf(j-1,k,0));
+                un(j,k,5) = 0.5*(B2_yf(j,k,0) + B2_yf(j,k-1,0));
+            }
+
+        boundary_conditions(un, parameters, id, p);
+    };
+
+    // ------------------------------------------------------------------------
+    // EM sub-cycle: SSP-RK3 steps from the current t_em up to t_target
     // ------------------------------------------------------------------------
     auto em_subcycle = [&](double t_target)
     {
@@ -139,39 +187,19 @@ void CENTPACK::evolution_2d_SD2(doublearray3d& un, doublearray3d& B1_xf, doublea
             for (j = 2; j < J+2; j++) lambda_em(j) = dt_em/dx_cell(j);
             for (k = 2; k < K+2; k++) mu_em(k)     = dt_em/dy_cell(k);
 
-            // --- E from current B, J and frozen rho, v ---
-            compute_J();
-            reconstruction_em(un, Jc, B1_xf, B2_yf, B_N, B_S, B_E, B_W,
-                              J_N, J_S, J_E, J_W,
-                              dx_cell, dx_interface, dy_cell, dy_interface, alpha);
-            electric_field(rho_N, rho_S, rho_E, rho_W, v_N, v_S, v_E, v_W,
-                           B_N, B_S, B_E, B_W, J_N, J_S, J_E, J_W,
-                           E_N, E_S, E_E, E_W, di, eta);
-            C_flux_em(rho_N, rho_S, rho_E, rho_W, B_N, B_S, B_E, B_W,
-                      E_N, E_S, E_E, E_W, lambda_em, mu_em,
-                      dx_interface, dy_interface, di, Cx_em, Cy_em, Cz_em, walls ? 1 : 0);
-
-            // --- Faraday update: faces for Bx, By; cell centers for Bz ---
+            // --- SSP-RK3 (Shu-Osher): stable for the imaginary whistler eigenvalues
+            //     without upwind damping, |omega*dt_em| <= sqrt(3) ---
             for (k = 2; k < K+2; k++)
                 for (j = 2; j < J+2; j++)
                 {
-                    B1_xf(j,k,0) += Cx_em(j,k);
-                    B2_yf(j,k,0) += Cy_em(j,k);
-                    un(j,k,6)    += Cz_em(j,k);
+                    Bx0(j,k) = B1_xf(j,k,0);
+                    By0(j,k) = B2_yf(j,k,0);
+                    Bz0(j,k) = un(j,k,6);
                 }
 
-            boundary_conditions_ct(B1_xf, id, p, yw_Bx);
-            boundary_conditions_ct(B2_yf, id, p, yw_By);
-
-            // --- recover cell-centered Bx, By from faces ---
-            for (k = 2; k < K+2; k++)
-                for (j = 2; j < J+2; j++)
-                {
-                    un(j,k,4) = 0.5*(B1_xf(j,k,0) + B1_xf(j-1,k,0));
-                    un(j,k,5) = 0.5*(B2_yf(j,k,0) + B2_yf(j,k-1,0));
-                }
-
-            boundary_conditions(un, parameters, id, p);
+            em_rhs();  em_stage(0.0,     1.0);       // u1 = u0 + L(u0)
+            em_rhs();  em_stage(0.75,    0.25);      // u2 = 3/4 u0 + 1/4 (u1 + L(u1))
+            em_rhs();  em_stage(1.0/3.0, 2.0/3.0);   // u3 = 1/3 u0 + 2/3 (u2 + L(u2))
 
             nsub++;
             t_em += dt_em;
